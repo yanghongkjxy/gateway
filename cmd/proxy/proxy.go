@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/fagongzi/gateway/pkg/proxy"
+	"github.com/fagongzi/gateway/pkg/util"
 	"github.com/fagongzi/log"
 )
 
@@ -47,12 +48,15 @@ var (
 	limitBufferRead               = flag.Int("limit-buf-read", 2048, "Limit(bytes): Bytes for read buffer size")
 	limitBufferWrite              = flag.Int("limit-buf-write", 1024, "Limit(bytes): Bytes for write buffer size")
 	limitBytesBodyMB              = flag.Int("limit-body", 10, "Limit(MB): MB for body size")
+	limitBytesCachingMB           = flag.Uint64("limit-caching", 64, "Limit(MB): MB for caching size")
 	ttlProxy                      = flag.Int64("ttl-proxy", 10, "TTL(secs): proxy")
+	version                       = flag.Bool("version", false, "Show version info")
 )
 
 func init() {
 	defaultFilters.Set(proxy.FilterWhiteList)
 	defaultFilters.Set(proxy.FilterBlackList)
+	defaultFilters.Set(proxy.FilterCaching)
 	defaultFilters.Set(proxy.FilterAnalysis)
 	defaultFilters.Set(proxy.FilterRateLimiting)
 	defaultFilters.Set(proxy.FilterCircuitBreake)
@@ -65,6 +69,10 @@ func init() {
 func main() {
 	flag.Var(filters, "filter", "Plugin(Filter): format is <filter name>[:plugin file path][:plugin config file path]")
 	flag.Parse()
+
+	if *version && util.PrintVersion() {
+		os.Exit(0)
+	}
 
 	log.InitLog()
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -115,6 +123,7 @@ func getCfg() *proxy.Cfg {
 	cfg.TTLProxy = *ttlProxy
 	cfg.Namespace = fmt.Sprintf("/%s", *namespace)
 	cfg.Option.LimitBytesBody = *limitBytesBodyMB * 1024 * 1024
+	cfg.Option.LimitBytesCaching = *limitBytesCachingMB * 1024 * 1024
 	cfg.Option.LimitBufferRead = *limitBufferRead
 	cfg.Option.LimitBufferWrite = *limitBufferWrite
 	cfg.Option.LimitCountConn = *limitCountConn
